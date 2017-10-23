@@ -16,7 +16,7 @@
 struct RoutingSolution {
   std::int64_t cost;
   std::vector<std::vector<NodeIndex>> routes;
-  std::vector<std::vector<Interval>> times;
+  std::vector<std::vector<int32_t>> times;
 };
 
 struct VRPWorker final : Nan::AsyncWorker {
@@ -193,20 +193,21 @@ struct VRPWorker final : Nan::AsyncWorker {
     std::vector<std::vector<NodeIndex>> routes;
     model.AssignmentToRoutes(*assignment, &routes);
 
-    std::vector<std::vector<Interval>> times;
+    std::vector<std::vector<std::int32_t>> times;
 
     for (const auto& route : routes) {
-      std::vector<Interval> routeTimes;
+      std::vector<std::int32_t> routeTimes;
 
       for (const auto& node : route) {
         const auto index = model.NodeToIndex(node);
 
         const auto* timeVar = timeDimension.CumulVar(index);
 
-        const auto first = static_cast<std::int32_t>(assignment->Min(timeVar));
-        const auto last = static_cast<std::int32_t>(assignment->Max(timeVar));
+        const auto value = static_cast<std::int32_t>(assignment->Value(timeVar));
+        //const auto first = static_cast<std::int32_t>(assignment->Min(timeVar));
+        //const auto last = static_cast<std::int32_t>(assignment->Max(timeVar));
 
-        routeTimes.push_back(Interval{first, last});
+        routeTimes.push_back(value);
       }
 
       times.push_back(std::move(routeTimes));
@@ -234,12 +235,9 @@ struct VRPWorker final : Nan::AsyncWorker {
       for (std::size_t j = 0; j < route.size(); ++j) {
         Nan::Set(jsNodes, j, Nan::New<v8::Number>(route[j].value()));
 
-        auto jsInterval = Nan::New<v8::Array>(2);
+        auto jsTime = Nan::New<v8::Number>(times[j]);
 
-        Nan::Set(jsInterval, 0, Nan::New<v8::Number>(times[j].start));
-        Nan::Set(jsInterval, 1, Nan::New<v8::Number>(times[j].stop));
-
-        Nan::Set(jsNodeTimes, j, jsInterval);
+        Nan::Set(jsNodeTimes, j, jsTime);
       }
 
       Nan::Set(jsRoutes, i, jsNodes);
