@@ -11,6 +11,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 struct RoutingSolution {
   std::int64_t cost;
@@ -115,6 +116,16 @@ struct VRPWorker final : Nan::AsyncWorker {
       // CumulVar(n)->RemoveInterval(stop, start).
     }
 
+    for (std::int32_t node = 0; node < numNodes; ++node) {
+        model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
+    }
+      for (int j = 0; j < numVehicles; ++j) {
+        model.AddVariableMaximizedByFinalizer(
+            timeDimension.CumulVar(model.Start(j)));
+        model.AddVariableMinimizedByFinalizer(
+            timeDimension.CumulVar(model.End(j)));
+      }
+
     // Capacity Dimension
 
     auto demandAdaptor = makeBinaryAdaptor(*demands);
@@ -125,9 +136,10 @@ struct VRPWorker final : Nan::AsyncWorker {
     model.AddDimension(demandCallback, /*slack=*/0, vehicleCapacity, /*fix_start_cumul_to_zero=*/true, kDimensionCapacity);
     // const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
 
-    // Pickup and Deliveries
-
     auto* solver = model.solver();
+
+    /*
+    // Pickup and Deliveries
 
     for (std::int32_t atIdx = 0; atIdx < pickups.size(); ++atIdx) {
       const auto pickupIndex = model.NodeToIndex(pickups.at(atIdx));
@@ -143,17 +155,33 @@ struct VRPWorker final : Nan::AsyncWorker {
       solver->AddConstraint(pickupBeforeDeliveryCt);
 
       model.AddPickupAndDelivery(pickups.at(atIdx), deliveries.at(atIdx));
-    }
+    }*/
+
+
+    /*
+    // Force all vehicles to service
+
+    for (auto vehicle = 0; vehicle < numVehicles; ++vehicle) {
+        operations_research::IntVar* const start = model.NextVar(model.Start(vehicle));
+
+        for (auto node = model.Size(); node < model.Size() + model.vehicles(); ++node)
+          start->RemoveValue(node);
+    }*/
+
+
+
 
     // Done with modifications to the routing model
 
     model.CloseModel();
 
+    /*
     // Locking routes into place needs to happen after the model is closed and the underlying vars are established
-    const auto validLocks = model.ApplyLocksToAllVehicles(routeLocks, /*close_routes=*/false);
+    const auto validLocks = model.ApplyLocksToAllVehicles(routeLocks, false);
 
     if (!validLocks)
       return SetErrorMessage("Invalid locks");
+    */
 
     const auto* assignment = model.SolveWithParameters(searchParams);
 
