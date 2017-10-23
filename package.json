@@ -41,7 +41,7 @@
   },
   "scripts": {
     "clean": "node-pre-gyp clean",
-    "install": "node-pre-gyp install --build-from-source",
+    "install": "node-pre-gyp install --ensure",
     "test": "tap -Rspec test/*.js"
   },
   "url": "https://github.com/albertsgrc/node-or-tools.git",
