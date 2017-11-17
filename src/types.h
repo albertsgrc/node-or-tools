@@ -26,7 +26,7 @@ struct Interval {
   Interval() : start{0}, stop{0} {}
 
   Interval(std::int32_t start_, std::int32_t stop_) : start{start_}, stop{stop_} {
-    if (start < 0 || stop < 0 || stop < start)
+    if (start != -1 and stop != -1 and (start < 0 || stop < 0 || stop < start))
       throw std::runtime_error{"Negative intervals not supported"};
   }
 

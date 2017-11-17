@@ -13,11 +13,14 @@
 #include <vector>
 #include <iostream>
 
+using namespace std;
+
 struct RoutingSolution {
   std::int64_t cost;
   std::vector<std::vector<NodeIndex>> routes;
   std::vector<std::vector<int32_t>> times;
 };
+
 
 struct VRPWorker final : Nan::AsyncWorker {
   using Base = Nan::AsyncWorker;
@@ -90,7 +93,50 @@ struct VRPWorker final : Nan::AsyncWorker {
       throw std::runtime_error{"Expected pickups and deliveries parallel array sizes to match"};
   }
 
+  string time_to_string(int32_t x, bool showSeconds = true) {
+    int hours = x/3600;
+    int minutes = (x%3600)/60;
+    int secondslol = (x%3600)%60;
+
+    string secondsString = ":";
+    secondsString += (secondslol < 10 ? "0" : "");
+    secondsString += to_string(secondslol);
+
+    return (hours < 10 ? "0" : "") + to_string(hours) + ':' + (minutes < 10 ? "0" : "") + to_string(minutes) + (showSeconds ? secondsString : "");
+  }
+
+
+  void PrintInput() {
+      cerr << "NumNodes: " << numNodes << endl;
+      cerr << "NumVehicles: " << numVehicles << endl;
+      cerr << "VehicleDepot: " << vehicleDepot << endl;
+      cerr << "TimeHorizon: " << time_to_string(timeHorizon, true) << endl;
+      cerr << "VehicleCapacity: " << vehicleCapacity << endl;
+
+    cerr << "Costs:" << endl;
+    costs->print(cerr);
+    cerr << endl;
+
+    cerr << "Durations:" << endl;
+    durations->print(cerr);
+    cerr << endl;
+
+    cerr << "TimeWindows" << endl;
+    for (int i = 0; i < timeWindows->size(); ++i) {
+        auto x = timeWindows->at(i);
+        cerr << (x.start != -1 ? time_to_string(x.start, false) : "     ") << " -> " << (x.stop != -1 ? time_to_string(x.stop, false) : "     ") << endl;
+    }
+
+    cerr << "Demands" << endl;
+    for (int i = 0; i < demands->dim(); ++i) {
+        cerr << demands->at(i, 0) << endl;
+    }
+
+  }
+
   void Execute() override {
+    //this->PrintInput();
+
     auto costAdaptor = makeBinaryAdaptor(*costs);
     auto costCallback = makeCallback(costAdaptor);
 
@@ -103,12 +149,36 @@ struct VRPWorker final : Nan::AsyncWorker {
 
     const static auto kDimensionTime = "time";
 
-    model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/true, kDimensionTime);
+    model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/false, kDimensionTime);
     const auto& timeDimension = model.GetDimensionOrDie(kDimensionTime);
+    auto* mutableTimeDimension = model.GetMutableDimension(kDimensionTime);
+
+    int32_t min = timeHorizon;
+
+    for (std::int32_t node = 0; node < numNodes; ++node) {
+        auto v = timeWindows->at(node).start;
+        if (v != -1 and v < min) min = v;
+    }
 
     for (std::int32_t node = 0; node < numNodes; ++node) {
       const auto interval = timeWindows->at(node);
-      timeDimension.CumulVar(node)->SetRange(interval.start, interval.stop);
+
+
+      if (interval.start != -1) {
+        timeDimension.CumulVar(node)->SetMin(interval.start);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*60*3, 99);
+        model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
+      }
+      else {
+        model.AddVariableMaximizedByFinalizer(timeDimension.CumulVar(node));
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, 99);
+      }
+
+      if (interval.stop != -1) {
+          //timeDimension.CumulVar(node)->SetMax(interval.stop);
+          mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, 99999);
+      }
+
       // At the moment we only support a single interval for time windows.
       // We can support multiple intervals if we sort intervals by start then stop.
       // Then Cumulval(n)->SetRange(minStart, maxStop), then walk over intervals
@@ -116,15 +186,26 @@ struct VRPWorker final : Nan::AsyncWorker {
       // CumulVar(n)->RemoveInterval(stop, start).
     }
 
-    for (std::int32_t node = 0; node < numNodes; ++node) {
-        model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
-    }
+
       for (int j = 0; j < numVehicles; ++j) {
         model.AddVariableMaximizedByFinalizer(
             timeDimension.CumulVar(model.Start(j)));
         model.AddVariableMinimizedByFinalizer(
             timeDimension.CumulVar(model.End(j)));
       }
+/*
+    for (std::int32_t node = 0; node < numNodes; ++node) {
+        model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
+    }*/
+
+
+    model.SetDimensionTransitCost(kDimensionTime, 0);
+    model.SetDimensionSpanCost(kDimensionTime, 0);
+
+    // Delay Dimension
+
+
+
 
     // Capacity Dimension
 
@@ -134,13 +215,14 @@ struct VRPWorker final : Nan::AsyncWorker {
     const static auto kDimensionCapacity = "capacity";
 
     model.AddDimension(demandCallback, /*slack=*/0, vehicleCapacity, /*fix_start_cumul_to_zero=*/true, kDimensionCapacity);
-    // const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
+    //const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
+
 
     auto* solver = model.solver();
 
-    /*
-    // Pickup and Deliveries
 
+    // Pickup and Deliveries
+    /*
     for (std::int32_t atIdx = 0; atIdx < pickups.size(); ++atIdx) {
       const auto pickupIndex = model.NodeToIndex(pickups.at(atIdx));
       const auto deliveryIndex = model.NodeToIndex(deliveries.at(atIdx));
@@ -183,7 +265,11 @@ struct VRPWorker final : Nan::AsyncWorker {
       return SetErrorMessage("Invalid locks");
     */
 
+    //cerr << timeWindows->at(24).start << ' ' << timeDimension.CumulVar(24) << ' ' << timeWindows->at(24).stop << endl;
+
+
     const auto* assignment = model.SolveWithParameters(searchParams);
+
 
     if (!assignment || (model.status() != RoutingModel::Status::ROUTING_SUCCESS))
       return SetErrorMessage("Unable to find a solution");
@@ -194,21 +280,38 @@ struct VRPWorker final : Nan::AsyncWorker {
     model.AssignmentToRoutes(*assignment, &routes);
 
     std::vector<std::vector<std::int32_t>> times;
-
+       int vehicle = 0;
     for (const auto& route : routes) {
       std::vector<std::int32_t> routeTimes;
+
+      if (route.size())
+       routeTimes.push_back(static_cast<std::int32_t>(assignment->Value(timeDimension.CumulVar(model.Start(vehicle)))));
 
       for (const auto& node : route) {
         const auto index = model.NodeToIndex(node);
 
         const auto* timeVar = timeDimension.CumulVar(index);
+        //const auto* delayVar = delayDimension->CumulVar(index);
+
+        //if (node == 24) cerr << timeWindows->at(24).start << ' ' << assignment->Value(timeDimension.CumulVar(index)) << ' ' << timeWindows->at(24).stop << endl;
 
         const auto value = static_cast<std::int32_t>(assignment->Value(timeVar));
+        //const auto value2 = static_cast<std::int32_t>(assignment->Value(delayVar));
+
+
+        //if (i == route.size() -1) std::cerr << "Time: " << value << " Delay:" << value2  <<  ' ';
         //const auto first = static_cast<std::int32_t>(assignment->Min(timeVar));
         //const auto last = static_cast<std::int32_t>(assignment->Max(timeVar));
 
         routeTimes.push_back(value);
       }
+
+      if (route.size())
+        routeTimes.push_back(static_cast<std::int32_t>(assignment->Value(timeDimension.CumulVar(model.End(vehicle)))));
+      ++vehicle;
+
+      //std::cerr << std::endl;
+
 
       times.push_back(std::move(routeTimes));
     }
@@ -232,9 +335,10 @@ struct VRPWorker final : Nan::AsyncWorker {
       auto jsNodes = Nan::New<v8::Array>(route.size());
       auto jsNodeTimes = Nan::New<v8::Array>(times.size());
 
-      for (std::size_t j = 0; j < route.size(); ++j) {
+      for (std::size_t j = 0; j < route.size(); ++j)
         Nan::Set(jsNodes, j, Nan::New<v8::Number>(route[j].value()));
 
+      for (std::size_t j = 0; j < times.size(); ++j) {
         auto jsTime = Nan::New<v8::Number>(times[j]);
 
         Nan::Set(jsNodeTimes, j, jsTime);
