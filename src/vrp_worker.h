@@ -37,6 +37,8 @@ struct VRPWorker final : Nan::AsyncWorker {
             std::int32_t vehicleDepot_,                       //
             std::int32_t timeHorizon_,                        //
             std::int32_t vehicleCapacity_,                    //
+            std::int32_t ignoreCapacityLimit_,
+            std::int32_t minimumPenalizeDelayMinutes_,
             RouteLocks routeLocks_,                           //
             Pickups pickups_,                                 //
             Deliveries deliveries_)                           //
@@ -52,6 +54,8 @@ struct VRPWorker final : Nan::AsyncWorker {
         vehicleDepot{vehicleDepot_},
         timeHorizon{timeHorizon_},
         vehicleCapacity{vehicleCapacity_},
+        ignoreCapacityLimit{ignoreCapacityLimit_},
+        minimumPenalizeDelayMinutes{minimumPenalizeDelayMinutes_},
         routeLocks{std::move(routeLocks_)},
         pickups{std::move(pickups_)},
         deliveries{std::move(deliveries_)},
@@ -160,18 +164,26 @@ struct VRPWorker final : Nan::AsyncWorker {
         if (v != -1 and v < min) min = v;
     }
 
+      for (int j = 0; j < numVehicles; ++j) {
+        model.AddVariableMaximizedByFinalizer(
+            timeDimension.CumulVar(model.Start(j)));
+        model.AddVariableMinimizedByFinalizer(
+            timeDimension.CumulVar(model.End(j)));
+      }
+
     for (std::int32_t node = 0; node < numNodes; ++node) {
       const auto interval = timeWindows->at(node);
 
 
       if (interval.start != -1) {
         timeDimension.CumulVar(node)->SetMin(interval.start);
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*60*3, 99);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, 99);
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
       }
       else {
         model.AddVariableMaximizedByFinalizer(timeDimension.CumulVar(node));
         mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, 99);
+        model.SlackVar(node, kDimensionTime)->SetMax(0);
       }
 
       if (interval.stop != -1) {
@@ -187,12 +199,6 @@ struct VRPWorker final : Nan::AsyncWorker {
     }
 
 
-      for (int j = 0; j < numVehicles; ++j) {
-        model.AddVariableMaximizedByFinalizer(
-            timeDimension.CumulVar(model.Start(j)));
-        model.AddVariableMinimizedByFinalizer(
-            timeDimension.CumulVar(model.End(j)));
-      }
 /*
     for (std::int32_t node = 0; node < numNodes; ++node) {
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
@@ -209,13 +215,15 @@ struct VRPWorker final : Nan::AsyncWorker {
 
     // Capacity Dimension
 
-    auto demandAdaptor = makeBinaryAdaptor(*demands);
-    auto demandCallback = makeCallback(demandAdaptor);
+    if (!ignoreCapacityLimit) {
+        auto demandAdaptor = makeBinaryAdaptor(*demands);
+        auto demandCallback = makeCallback(demandAdaptor);
 
-    const static auto kDimensionCapacity = "capacity";
+        const static auto kDimensionCapacity = "capacity";
 
-    model.AddDimension(demandCallback, /*slack=*/0, vehicleCapacity, /*fix_start_cumul_to_zero=*/true, kDimensionCapacity);
-    //const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
+        model.AddDimension(demandCallback, /*slack=*/0, vehicleCapacity, /*fix_start_cumul_to_zero=*/true, kDimensionCapacity);
+        //const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
+    }
 
 
     auto* solver = model.solver();
@@ -369,6 +377,8 @@ struct VRPWorker final : Nan::AsyncWorker {
   std::int32_t vehicleDepot;
   std::int32_t timeHorizon;
   std::int32_t vehicleCapacity;
+  std::int32_t ignoreCapacityLimit;
+  std::int32_t minimumPenalizeDelayMinutes;
 
   const RouteLocks routeLocks;
 

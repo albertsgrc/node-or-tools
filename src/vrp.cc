@@ -94,6 +94,8 @@ NAN_METHOD(VRP::Solve) try {
                                userParams.depotNode,                   //
                                userParams.timeHorizon,                 //
                                userParams.vehicleCapacity,             //
+                               userParams.ignoreCapacityLimit,
+                               userParams.minimumPenalizeDelayMinutes,
                                std::move(userParams.routeLocks),       //
                                std::move(userParams.pickups),          //
                                std::move(userParams.deliveries)};      //

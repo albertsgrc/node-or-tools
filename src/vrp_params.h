@@ -26,6 +26,8 @@ struct VRPSearchParams {
   std::int32_t depotNode;
   std::int32_t timeHorizon;
   std::int32_t vehicleCapacity;
+  std::int32_t ignoreCapacityLimit;
+  std::int32_t minimumPenalizeDelayMinutes;
 
   RouteLocks routeLocks;
 
@@ -124,11 +126,13 @@ VRPSolverParams::VRPSolverParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto maybeTimeWindowsVector = Nan::Get(opts, Nan::New("timeWindows").ToLocalChecked());
   auto maybeDemandMatrix = Nan::Get(opts, Nan::New("demands").ToLocalChecked());
 
+
   auto numNodesOk = !maybeNumNodes.IsEmpty() && maybeNumNodes.ToLocalChecked()->IsNumber();
   auto costMatrixOk = !maybeCostMatrix.IsEmpty() && maybeCostMatrix.ToLocalChecked()->IsArray();
   auto durationMatrixOk = !maybeDurationMatrix.IsEmpty() && maybeDurationMatrix.ToLocalChecked()->IsArray();
   auto timeWindowsVectorOk = !maybeTimeWindowsVector.IsEmpty() && maybeTimeWindowsVector.ToLocalChecked()->IsArray();
   auto demandMatrixOk = !maybeDemandMatrix.IsEmpty() && maybeDemandMatrix.ToLocalChecked()->IsArray();
+
 
   if (!numNodesOk || !costMatrixOk || !durationMatrixOk || !timeWindowsVectorOk || !demandMatrixOk)
     throw std::runtime_error{"SolverOptions expects"
@@ -149,6 +153,7 @@ VRPSolverParams::VRPSolverParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   durations = makeMatrixFrom2dArray<DurationMatrix>(numNodes, durationMatrix);
   timeWindows = makeTimeWindowsFrom2dArray(numNodes, timeWindowsVector);
   demands = makeMatrixFrom2dArray<DemandMatrix>(numNodes, demandMatrix);
+
 }
 
 VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& info) {
@@ -165,6 +170,9 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto maybeRouteLocks = Nan::Get(opts, Nan::New("routeLocks").ToLocalChecked());
   auto maybePickups = Nan::Get(opts, Nan::New("pickups").ToLocalChecked());
   auto maybeDeliveries = Nan::Get(opts, Nan::New("deliveries").ToLocalChecked());
+  auto maybeIgnoreCapacityLimit = Nan::Get(opts, Nan::New("ignoreCapacityLimit").ToLocalChecked());
+  auto maybeMinimumPenalizeDelayMinutes = Nan::Get(opts, Nan::New("minimumPenalizeDelayMinutes").ToLocalChecked());
+
 
   auto computeTimeLimitOk = !maybeComputeTimeLimit.IsEmpty() && maybeComputeTimeLimit.ToLocalChecked()->IsNumber();
   auto numVehiclesOk = !maybeNumVehicles.IsEmpty() && maybeNumVehicles.ToLocalChecked()->IsNumber();
@@ -174,10 +182,14 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto routeLocksOk = !maybeRouteLocks.IsEmpty() && maybeRouteLocks.ToLocalChecked()->IsArray();
   auto pickupsOk = !maybePickups.IsEmpty() && maybePickups.ToLocalChecked()->IsArray();
   auto deliveriesOk = !maybeDeliveries.IsEmpty() && maybeDeliveries.ToLocalChecked()->IsArray();
+  bool isIgnoreCapacityEmpty = maybeIgnoreCapacityLimit.IsEmpty();
+  bool ignoreCapacityLimitOk = isIgnoreCapacityEmpty || maybeIgnoreCapacityLimit.ToLocalChecked()->IsNumber();
+  bool isMinimumPenalizeDelayMinutesEmpty = maybeMinimumPenalizeDelayMinutes.IsEmpty();
+  bool isMinimumPenalizeDelayMinutesOk = isMinimumPenalizeDelayMinutesEmpty || maybeMinimumPenalizeDelayMinutes.ToLocalChecked()->IsNumber();
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
   if (!computeTimeLimitOk || !numVehiclesOk || !depotNodeOk || !timeHorizonOk || !vehicleCapacityOk || !routeLocksOk ||
-      !pickupsOk || !deliveriesOk)
+      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk)
     throw std::runtime_error{"SearchOptions expects"
                              " 'computeTimeLimit' (Number),"
                              " 'numVehicles' (Number),"
@@ -193,6 +205,9 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   depotNode = Nan::To<std::int32_t>(maybeDepotNode.ToLocalChecked()).FromJust();
   timeHorizon = Nan::To<std::int32_t>(maybeTimeHorizon.ToLocalChecked()).FromJust();
   vehicleCapacity = Nan::To<std::int32_t>(maybeVehicleCapacity.ToLocalChecked()).FromJust();
+  ignoreCapacityLimit = isIgnoreCapacityEmpty ? 0 : Nan::To<std::int32_t>(maybeIgnoreCapacityLimit.ToLocalChecked()).FromJust();
+  minimumPenalizeDelayMinutes = isMinimumPenalizeDelayMinutesEmpty ? 0 : Nan::To<std::int32_t>(maybeMinimumPenalizeDelayMinutes.ToLocalChecked()).FromJust();
+
 
   auto routeLocksArray = maybeRouteLocks.ToLocalChecked().As<v8::Array>();
   routeLocks = makeRouteLocksFrom2dArray(numVehicles, routeLocksArray);
