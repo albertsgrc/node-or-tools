@@ -96,6 +96,10 @@ NAN_METHOD(VRP::Solve) try {
                                userParams.vehicleCapacity,             //
                                userParams.ignoreCapacityLimit,
                                userParams.minimumPenalizeDelayMinutes,
+                               userParams.freeDelayPenalization,
+                               userParams.startDelayPenalization,
+                               userParams.timePenalization,
+                               userParams.endDelayPenalization,
                                std::move(userParams.routeLocks),       //
                                std::move(userParams.pickups),          //
                                std::move(userParams.deliveries)};      //

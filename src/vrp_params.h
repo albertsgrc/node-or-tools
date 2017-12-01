@@ -29,6 +29,11 @@ struct VRPSearchParams {
   std::int32_t ignoreCapacityLimit;
   std::int32_t minimumPenalizeDelayMinutes;
 
+  std::int32_t freeDelayPenalization;
+  std::int32_t startDelayPenalization;
+  std::int32_t timePenalization;
+  std::int32_t endDelayPenalization;
+
   RouteLocks routeLocks;
 
   Pickups pickups;
@@ -172,6 +177,10 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto maybeDeliveries = Nan::Get(opts, Nan::New("deliveries").ToLocalChecked());
   auto maybeIgnoreCapacityLimit = Nan::Get(opts, Nan::New("ignoreCapacityLimit").ToLocalChecked());
   auto maybeMinimumPenalizeDelayMinutes = Nan::Get(opts, Nan::New("minimumPenalizeDelayMinutes").ToLocalChecked());
+  auto maybeFreeDelayPenalization = Nan::Get(opts, Nan::New("freeDelayPenalization").ToLocalChecked());
+  auto maybeStartDelayPenalization = Nan::Get(opts, Nan::New("startDelayPenalization").ToLocalChecked());
+  auto maybeTimePenalization = Nan::Get(opts, Nan::New("timePenalization").ToLocalChecked());
+  auto maybeEndDelayPenalization = Nan::Get(opts, Nan::New("endDelayPenalization").ToLocalChecked());
 
 
   auto computeTimeLimitOk = !maybeComputeTimeLimit.IsEmpty() && maybeComputeTimeLimit.ToLocalChecked()->IsNumber();
@@ -186,10 +195,19 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   bool ignoreCapacityLimitOk = isIgnoreCapacityEmpty || maybeIgnoreCapacityLimit.ToLocalChecked()->IsNumber();
   bool isMinimumPenalizeDelayMinutesEmpty = maybeMinimumPenalizeDelayMinutes.IsEmpty();
   bool isMinimumPenalizeDelayMinutesOk = isMinimumPenalizeDelayMinutesEmpty || maybeMinimumPenalizeDelayMinutes.ToLocalChecked()->IsNumber();
+  bool isFreeDelayPenalizationEmpty = maybeFreeDelayPenalization.IsEmpty();
+  bool isFreeDelayPenalizationOk = isFreeDelayPenalizationEmpty || maybeFreeDelayPenalization.ToLocalChecked()->IsNumber();
+  bool isStartDelayPenalizationEmpty = maybeStartDelayPenalization.IsEmpty();
+  bool isStartDelayPenalizationOk = isStartDelayPenalizationEmpty || maybeStartDelayPenalization.ToLocalChecked()->IsNumber();
+  bool isTimePenalizationEmpty = maybeTimePenalization.IsEmpty();
+  bool isTimePenalizationOk = isTimePenalizationEmpty || maybeTimePenalization.ToLocalChecked()->IsNumber();
+  bool isEndDelayPenalizationEmpty = maybeEndDelayPenalization.IsEmpty();
+  bool isEndDelayPenalizationOk = isEndDelayPenalizationEmpty || maybeEndDelayPenalization.ToLocalChecked()->IsNumber();
+
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
   if (!computeTimeLimitOk || !numVehiclesOk || !depotNodeOk || !timeHorizonOk || !vehicleCapacityOk || !routeLocksOk ||
-      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk)
+      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk)
     throw std::runtime_error{"SearchOptions expects"
                              " 'computeTimeLimit' (Number),"
                              " 'numVehicles' (Number),"
@@ -207,6 +225,10 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   vehicleCapacity = Nan::To<std::int32_t>(maybeVehicleCapacity.ToLocalChecked()).FromJust();
   ignoreCapacityLimit = isIgnoreCapacityEmpty ? 0 : Nan::To<std::int32_t>(maybeIgnoreCapacityLimit.ToLocalChecked()).FromJust();
   minimumPenalizeDelayMinutes = isMinimumPenalizeDelayMinutesEmpty ? 0 : Nan::To<std::int32_t>(maybeMinimumPenalizeDelayMinutes.ToLocalChecked()).FromJust();
+  freeDelayPenalization = isFreeDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeFreeDelayPenalization.ToLocalChecked()).FromJust();
+  startDelayPenalization = isStartDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeStartDelayPenalization.ToLocalChecked()).FromJust();
+  timePenalization = isTimePenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeTimePenalization.ToLocalChecked()).FromJust();
+  endDelayPenalization = isEndDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeEndDelayPenalization.ToLocalChecked()).FromJust();
 
 
   auto routeLocksArray = maybeRouteLocks.ToLocalChecked().As<v8::Array>();

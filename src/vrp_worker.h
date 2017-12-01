@@ -39,6 +39,10 @@ struct VRPWorker final : Nan::AsyncWorker {
             std::int32_t vehicleCapacity_,                    //
             std::int32_t ignoreCapacityLimit_,
             std::int32_t minimumPenalizeDelayMinutes_,
+            std::int32_t _freeDelayPenalization,
+            std::int32_t _startDelayPenalization,
+            std::int32_t _timePenalization,
+            std::int32_t _endDelayPenalization,
             RouteLocks routeLocks_,                           //
             Pickups pickups_,                                 //
             Deliveries deliveries_)                           //
@@ -56,6 +60,10 @@ struct VRPWorker final : Nan::AsyncWorker {
         vehicleCapacity{vehicleCapacity_},
         ignoreCapacityLimit{ignoreCapacityLimit_},
         minimumPenalizeDelayMinutes{minimumPenalizeDelayMinutes_},
+        freeDelayPenalization{_freeDelayPenalization},
+        startDelayPenalization{_startDelayPenalization},
+        timePenalization{_timePenalization},
+        endDelayPenalization{_endDelayPenalization},
         routeLocks{std::move(routeLocks_)},
         pickups{std::move(pickups_)},
         deliveries{std::move(deliveries_)},
@@ -177,18 +185,18 @@ struct VRPWorker final : Nan::AsyncWorker {
 
       if (interval.start != -1) {
         timeDimension.CumulVar(node)->SetMin(interval.start);
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, 300);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, startDelayPenalization);
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
       }
       else {
         model.AddVariableMaximizedByFinalizer(timeDimension.CumulVar(node));
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, 300);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, freeDelayPenalization);
         model.SlackVar(node, kDimensionTime)->SetMax(0);
       }
 
       if (interval.stop != -1) {
           //timeDimension.CumulVar(node)->SetMax(interval.stop);
-          mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, 99999);
+          mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, endDelayPenalization);
       }
 
       // At the moment we only support a single interval for time windows.
@@ -205,7 +213,7 @@ struct VRPWorker final : Nan::AsyncWorker {
     }*/
 
 
-    model.SetDimensionTransitCost(kDimensionTime, 2);
+    model.SetDimensionTransitCost(kDimensionTime, timePenalization);
 
     // Delay Dimension
 
@@ -378,6 +386,10 @@ struct VRPWorker final : Nan::AsyncWorker {
   std::int32_t vehicleCapacity;
   std::int32_t ignoreCapacityLimit;
   std::int32_t minimumPenalizeDelayMinutes;
+    std::int32_t freeDelayPenalization;
+    std::int32_t startDelayPenalization;
+    std::int32_t timePenalization;
+    std::int32_t endDelayPenalization;
 
   const RouteLocks routeLocks;
 
