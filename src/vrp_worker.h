@@ -177,12 +177,12 @@ struct VRPWorker final : Nan::AsyncWorker {
 
       if (interval.start != -1) {
         timeDimension.CumulVar(node)->SetMin(interval.start);
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, 99);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, 300);
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
       }
       else {
         model.AddVariableMaximizedByFinalizer(timeDimension.CumulVar(node));
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, 99);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, 300);
         model.SlackVar(node, kDimensionTime)->SetMax(0);
       }
 
@@ -205,8 +205,7 @@ struct VRPWorker final : Nan::AsyncWorker {
     }*/
 
 
-    model.SetDimensionTransitCost(kDimensionTime, 0);
-    model.SetDimensionSpanCost(kDimensionTime, 0);
+    model.SetDimensionTransitCost(kDimensionTime, 2);
 
     // Delay Dimension
 
