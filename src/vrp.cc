@@ -65,7 +65,7 @@ NAN_METHOD(VRP::Solve) try {
   auto modelParams = RoutingModel::DefaultModelParameters();
   auto searchParams = RoutingModel::DefaultSearchParameters();
 
-  auto firstSolutionStrategy = FirstSolutionStrategy::AUTOMATIC;
+  auto firstSolutionStrategy = FirstSolutionStrategy::PATH_MOST_CONSTRAINED_ARC;
   auto metaHeuristic = LocalSearchMetaheuristic::AUTOMATIC;
 
   searchParams.set_first_solution_strategy(firstSolutionStrategy);
