@@ -61,6 +61,7 @@ using Solver = ort::Solver;
 //  - lock chain is ordered list of node indices for vehicle i (must not contain depots)
 using LockChain = std::vector<NodeIndex>;
 using RouteLocks = std::vector<LockChain>;
+using DeliveryPriorities = std::vector<std::int32_t>;
 
 // Pickup and Delivery constraints expressed as parallel arrays
 // e.g. pickups: [1, 2], deliveries: [5, 6] means
