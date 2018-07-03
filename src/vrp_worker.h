@@ -191,21 +191,22 @@ struct VRPWorker final : Nan::AsyncWorker {
     for (std::int32_t node = 0; node < numNodes; ++node) {
       const auto interval = timeWindows->at(node);
 
+      int priority = deliveryPriorities[node];
 
       if (interval.start != -1) {
         timeDimension.CumulVar(node)->SetMin(interval.start);
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, startDelayPenalization*deliveryPriorities[node]);
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.start + 60*minimumPenalizeDelayMinutes, startDelayPenalization*priority);
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
       }
       else {
-        model.AddVariableMaximizedByFinalizer(timeDimension.CumulVar(node));
-        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, freeDelayPenalization*deliveryPriorities[node]);
+        model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
+        mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, freeDelayPenalization*priority);
         model.SlackVar(node, kDimensionTime)->SetMax(0);
       }
 
       if (interval.stop != -1) {
           //timeDimension.CumulVar(node)->SetMax(interval.stop);
-          mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, endDelayPenalization*deliveryPriorities[node]);
+          mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, endDelayPenalization*priority);
       }
 
       // At the moment we only support a single interval for time windows.

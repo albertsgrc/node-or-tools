@@ -211,11 +211,12 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   bool isEndDelayPenalizationOk = isEndDelayPenalizationEmpty || maybeEndDelayPenalization.ToLocalChecked()->IsNumber();
   bool isFinalTimeOk = maybeFinalTime.ToLocalChecked()->IsNumber();
   bool isFinalTimeDelayPenalizationOk = maybeFinalTimeDelayPenalization.ToLocalChecked()->IsNumber();
+  bool isDeliveryPrioritiesOk = maybeDeliveryPriorities.ToLocalChecked()->IsArray();
 
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
   if (!computeTimeLimitOk || !numVehiclesOk || !depotNodeOk || !timeHorizonOk || !vehicleCapacityOk || !routeLocksOk ||
-      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk || !isFinalTimeOk || !isFinalTimeDelayPenalizationOk)
+      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk || !isFinalTimeOk || !isFinalTimeDelayPenalizationOk || !isDeliveryPrioritiesOK)
     throw std::runtime_error{"SearchOptions expects"
                              " 'computeTimeLimit' (Number),"
                              " 'numVehicles' (Number),"
