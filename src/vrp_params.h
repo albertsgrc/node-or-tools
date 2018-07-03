@@ -216,7 +216,7 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
   if (!computeTimeLimitOk || !numVehiclesOk || !depotNodeOk || !timeHorizonOk || !vehicleCapacityOk || !routeLocksOk ||
-      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk || !isFinalTimeOk || !isFinalTimeDelayPenalizationOk || !isDeliveryPrioritiesOK)
+      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk || !isFinalTimeOk || !isFinalTimeDelayPenalizationOk || !isDeliveryPrioritiesOk)
     throw std::runtime_error{"SearchOptions expects"
                              " 'computeTimeLimit' (Number),"
                              " 'numVehicles' (Number),"
