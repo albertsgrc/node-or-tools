@@ -100,10 +100,16 @@ NAN_METHOD(VRP::Solve) try {
                                userParams.startDelayPenalization,
                                userParams.timePenalization,
                                userParams.endDelayPenalization,
+
                                userParams.forceGlobalSchedule,
                                userParams.maxDeliveryPointsPerVehicle,
                                userParams.computeFromIndex,
                                userParams.computeUntilIndex,
+
+                               userParams.finalTime,
+                               userParams.finalTimeDelayPenalization,
+                               std::move(userParams.deliveryPriorities),
+
                                std::move(userParams.routeLocks),       //
                                std::move(userParams.pickups),          //
                                std::move(userParams.deliveries)};      //

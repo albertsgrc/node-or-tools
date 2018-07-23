@@ -28,6 +28,9 @@ struct VRPSearchParams {
   std::int32_t vehicleCapacity;
   std::int32_t ignoreCapacityLimit;
   std::int32_t minimumPenalizeDelayMinutes;
+  std::int32_t finalTime;
+  std::int32_t finalTimeDelayPenalization;
+
 
   std::int32_t freeDelayPenalization;
   std::int32_t startDelayPenalization;
@@ -39,6 +42,7 @@ struct VRPSearchParams {
   std::int32_t computeUntilIndex;
 
   RouteLocks routeLocks;
+  DeliveryPriorities deliveryPriorities;
 
   Pickups pickups;
   Deliveries deliveries;
@@ -185,12 +189,18 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto maybeStartDelayPenalization = Nan::Get(opts, Nan::New("startDelayPenalization").ToLocalChecked());
   auto maybeTimePenalization = Nan::Get(opts, Nan::New("timePenalization").ToLocalChecked());
   auto maybeEndDelayPenalization = Nan::Get(opts, Nan::New("endDelayPenalization").ToLocalChecked());
+
   auto maybeForceGlobalSchedule = Nan::Get(opts, Nan::New("forceGlobalSchedule").ToLocalChecked());
   auto maybeMaxDeliveryPointsPerVehicle =  Nan::Get(opts, Nan::New("maxDeliveryPointsPerVehicle").ToLocalChecked());
   auto maybeComputeFromIndex =  Nan::Get(opts, Nan::New("computeFromIndex").ToLocalChecked());
   auto maybeComputeUntilIndex = Nan::Get(opts, Nan::New("computeUntilIndex").ToLocalChecked());
 
 
+
+
+  auto maybeFinalTime = Nan::Get(opts, Nan::New("finalTime").ToLocalChecked());
+  auto maybeDeliveryPriorities = Nan::Get(opts, Nan::New("deliveryPriorities").ToLocalChecked());
+  auto maybeFinalTimeDelayPenalization = Nan::Get(opts, Nan::New("finalTimeDelayPenalization").ToLocalChecked());
 
 
   auto computeTimeLimitOk = !maybeComputeTimeLimit.IsEmpty() && maybeComputeTimeLimit.ToLocalChecked()->IsNumber();
@@ -213,6 +223,7 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   bool isTimePenalizationOk = isTimePenalizationEmpty || maybeTimePenalization.ToLocalChecked()->IsNumber();
   bool isEndDelayPenalizationEmpty = maybeEndDelayPenalization.IsEmpty();
   bool isEndDelayPenalizationOk = isEndDelayPenalizationEmpty || maybeEndDelayPenalization.ToLocalChecked()->IsNumber();
+
   bool isForceGlobalScheduleEmpty = maybeForceGlobalSchedule.IsEmpty();
   bool isForceGlobalScheduleOk =  isForceGlobalScheduleEmpty || maybeForceGlobalSchedule.ToLocalChecked()->IsNumber();
   bool isMaxDeliveryPointsPerVehicleEmpty = maybeMaxDeliveryPointsPerVehicle.IsEmpty();
@@ -222,10 +233,15 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   bool isComputeUntilIndexEmpty = maybeComputeUntilIndex.IsEmpty();
   bool isComputeUntilIndexOk = isComputeUntilIndexOk || maybeComputeUntilIndex.ToLocalChecked()->IsNumber();
 
+  bool isFinalTimeOk = maybeFinalTime.ToLocalChecked()->IsNumber();
+  bool isFinalTimeDelayPenalizationOk = maybeFinalTimeDelayPenalization.ToLocalChecked()->IsNumber();
+  bool isDeliveryPrioritiesOk = maybeDeliveryPriorities.ToLocalChecked()->IsArray();
+
+
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
   if (!computeTimeLimitOk || !numVehiclesOk || !depotNodeOk || !timeHorizonOk || !vehicleCapacityOk || !routeLocksOk ||
-      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk)
+      !pickupsOk || !deliveriesOk || !ignoreCapacityLimitOk || !isMinimumPenalizeDelayMinutesOk || !isFreeDelayPenalizationOk || !isStartDelayPenalizationOk || !isTimePenalizationOk || !isEndDelayPenalizationOk || !isFinalTimeOk || !isFinalTimeDelayPenalizationOk || !isDeliveryPrioritiesOk)
     throw std::runtime_error{"SearchOptions expects"
                              " 'computeTimeLimit' (Number),"
                              " 'numVehicles' (Number),"
@@ -247,10 +263,16 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   startDelayPenalization = isStartDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeStartDelayPenalization.ToLocalChecked()).FromJust();
   timePenalization = isTimePenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeTimePenalization.ToLocalChecked()).FromJust();
   endDelayPenalization = isEndDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeEndDelayPenalization.ToLocalChecked()).FromJust();
+
   forceGlobalSchedule = isForceGlobalScheduleEmpty ? 0 :  Nan::To<std::int32_t>(maybeEndDelayPenalization.ToLocalChecked()).FromJust();
   maxDeliveryPointsPerVehicle = maxDeliveryPointsPerVehicle ? 0 : Nan::To<std::int32_t>(maybeMaxDeliveryPointsPerVehicle.ToLocalChecked()).FromJust();
   computeFromIndex = isComputeFromIndexEmpty ? 0 : Nan::To<std::int32_t>(maybeComputeFromIndex.ToLocalChecked()).FromJust();
   computeUntilIndex = isComputeUntilIndexOk ? -1 : Nan::To<std::int32_t>(maybeComputeUntilIndex.ToLocalChecked()).FromJust();
+
+  finalTime = Nan::To<std::int32_t>(maybeFinalTime.ToLocalChecked()).FromJust();
+  finalTimeDelayPenalization = Nan::To<std::int32_t>(maybeFinalTimeDelayPenalization.ToLocalChecked()).FromJust();
+
+
 
   auto routeLocksArray = maybeRouteLocks.ToLocalChecked().As<v8::Array>();
   routeLocks = makeRouteLocksFrom2dArray(numVehicles, routeLocksArray);
@@ -260,6 +282,9 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
 
   auto deliveriesArray = maybeDeliveries.ToLocalChecked().As<v8::Array>();
   deliveries = makeVectorFromJsNumberArray<Deliveries>(deliveriesArray);
+
+  auto deliveryPrioritiesArray = maybeDeliveryPriorities.ToLocalChecked().As<v8::Array>();
+  deliveryPriorities = makeVectorFromJsNumberArray<DeliveryPriorities>(deliveryPrioritiesArray);
 
   callback = info[1].As<v8::Function>();
 }
