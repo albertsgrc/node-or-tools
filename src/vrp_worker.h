@@ -43,6 +43,10 @@ struct VRPWorker final : Nan::AsyncWorker {
             std::int32_t _startDelayPenalization,
             std::int32_t _timePenalization,
             std::int32_t _endDelayPenalization,
+            std::int32_t _forceGlobalSchedule,
+            std::int32_t _maxDeliveryPointsPerVehicle,
+            std::int32_t _computeFromIndex,
+            std::int32_t _computeUntilIndex,
             RouteLocks routeLocks_,                           //
             Pickups pickups_,                                 //
             Deliveries deliveries_)                           //
@@ -64,6 +68,10 @@ struct VRPWorker final : Nan::AsyncWorker {
         startDelayPenalization{_startDelayPenalization},
         timePenalization{_timePenalization},
         endDelayPenalization{_endDelayPenalization},
+        forceGlobalSchedule{_forceGlobalSchedule},
+        maxDeliveryPointsPerVehicle{_maxDeliveryPointsPerVehicle},
+        computeFromIndex{_computeFromIndex},
+        computeUntilIndex{_computeUntilIndex},
         routeLocks{std::move(routeLocks_)},
         pickups{std::move(pickups_)},
         deliveries{std::move(deliveries_)},
@@ -167,6 +175,8 @@ struct VRPWorker final : Nan::AsyncWorker {
 
     int32_t min = timeHorizon;
 
+
+
     for (std::int32_t node = 0; node < numNodes; ++node) {
         auto v = timeWindows->at(node).start;
         if (v != -1 and v < min) min = v;
@@ -177,6 +187,12 @@ struct VRPWorker final : Nan::AsyncWorker {
             timeDimension.CumulVar(model.Start(j)));
         model.AddVariableMinimizedByFinalizer(
             timeDimension.CumulVar(model.End(j)));
+      }
+
+      if (forceGlobalSchedule) {
+          for (int j = 0; j < numVehicles; ++j) {
+              timeDimension.CumulVar(model.Start(j))->SetValue(0);
+          }
       }
 
     for (std::int32_t node = 0; node < numNodes; ++node) {
@@ -390,6 +406,10 @@ struct VRPWorker final : Nan::AsyncWorker {
     std::int32_t startDelayPenalization;
     std::int32_t timePenalization;
     std::int32_t endDelayPenalization;
+    std::int32_t forceGlobalSchedule;
+    std::int32_t maxDeliveryPointsPerVehicle;
+    std::int32_t computeFromIndex;
+    std::int32_t computeUntilIndex;
 
   const RouteLocks routeLocks;
 
