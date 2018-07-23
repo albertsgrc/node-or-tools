@@ -181,7 +181,7 @@ struct VRPWorker final : Nan::AsyncWorker {
 
     const static auto kDimensionTime = "time";
 
-    model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/false, kDimensionTime);
+    model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/forceGlobalSchedule != 0, kDimensionTime);
     const auto& timeDimension = model.GetDimensionOrDie(kDimensionTime);
     auto* mutableTimeDimension = model.GetMutableDimension(kDimensionTime);
 
@@ -204,11 +204,6 @@ struct VRPWorker final : Nan::AsyncWorker {
         mutableTimeDimension->SetEndCumulVarSoftUpperBound(j, finalTime, finalTimeDelayPenalization);
       }
 
-      if (forceGlobalSchedule) {
-          for (int j = 0; j < numVehicles; ++j) {
-              timeDimension.CumulVar(model.Start(j))->SetValue(0);
-          }
-      }
 
     for (std::int32_t node = 0; node < numNodes; ++node) {
       const auto interval = timeWindows->at(node);
