@@ -102,6 +102,7 @@ NAN_METHOD(VRP::Solve) try {
                                userParams.endDelayPenalization,
 
                                userParams.forceGlobalSchedule,
+                               userParams.forceTimeWindows,
                                userParams.maxDeliveryPointsPerVehicle,
                                userParams.computeFromIndex,
                                userParams.computeUntilIndex,
