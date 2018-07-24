@@ -218,7 +218,7 @@ struct VRPWorker final : Nan::AsyncWorker {
       else {
         model.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(node));
         mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), min, freeDelayPenalization*priority);
-        model.SlackVar(node, kDimensionTime)->SetMax(0);
+        if (!forceGlobalSchedule) model.SlackVar(node, kDimensionTime)->SetMax(0);
       }
 
       if (interval.stop != -1) {
