@@ -269,7 +269,7 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   endDelayPenalization = isEndDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeEndDelayPenalization.ToLocalChecked()).FromJust();
 
   forceGlobalSchedule = isForceGlobalScheduleEmpty ? 0 :  Nan::To<std::int32_t>(maybeForceGlobalSchedule.ToLocalChecked()).FromJust();
-  forceTimeWindows = isForceTimeWindowsEmpty ? 0 : Nan::To<std::int32_t>(maybeForceGlobalSchedule.ToLocalChecked()).FromJust();;
+  forceTimeWindows = isForceTimeWindowsEmpty ? 0 : Nan::To<std::int32_t>(maybeForceTimeWindows.ToLocalChecked()).FromJust();;
   maxDeliveryPointsPerVehicle = maxDeliveryPointsPerVehicle ? 0 : Nan::To<std::int32_t>(maybeMaxDeliveryPointsPerVehicle.ToLocalChecked()).FromJust();
   computeFromIndex = isComputeFromIndexEmpty ? 0 : Nan::To<std::int32_t>(maybeComputeFromIndex.ToLocalChecked()).FromJust();
   computeUntilIndex = isComputeUntilIndexOk ? -1 : Nan::To<std::int32_t>(maybeComputeUntilIndex.ToLocalChecked()).FromJust();
