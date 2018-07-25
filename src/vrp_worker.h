@@ -228,9 +228,7 @@ struct VRPWorker final : Nan::AsyncWorker {
       }
 
       if (interval.stop != -1) {
-          //timeDimension.CumulVar(node)->SetMax(interval.stop);
-          if (priority == 2 or (priority > 0 and forceTimeWindows)) mutableTimeDimension->CumulVar(node)->SetMax(interval.stop);
-          else mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, endDelayPenalization*priority);
+         mutableTimeDimension->SetCumulVarSoftUpperBound(model.IndexToNode(node), interval.stop, endDelayPenalization*priority*priority);
       }
 
       // At the moment we only support a single interval for time windows.
