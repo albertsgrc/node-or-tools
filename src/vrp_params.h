@@ -36,6 +36,11 @@ struct VRPSearchParams {
   std::int32_t startDelayPenalization;
   std::int32_t timePenalization;
   std::int32_t endDelayPenalization;
+  std::int32_t forceGlobalSchedule;
+  std::int32_t forceTimeWindows;
+  std::int32_t maxDeliveryPointsPerVehicle;
+  std::int32_t computeFromIndex;
+  std::int32_t computeUntilIndex;
 
   RouteLocks routeLocks;
   DeliveryPriorities deliveryPriorities;
@@ -185,9 +190,20 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   auto maybeStartDelayPenalization = Nan::Get(opts, Nan::New("startDelayPenalization").ToLocalChecked());
   auto maybeTimePenalization = Nan::Get(opts, Nan::New("timePenalization").ToLocalChecked());
   auto maybeEndDelayPenalization = Nan::Get(opts, Nan::New("endDelayPenalization").ToLocalChecked());
+
+  auto maybeForceGlobalSchedule = Nan::Get(opts, Nan::New("forceGlobalSchedule").ToLocalChecked());
+  auto maybeForceTimeWindows = Nan::Get(opts, Nan::New("forceTimeWindows").ToLocalChecked());
+  auto maybeMaxDeliveryPointsPerVehicle =  Nan::Get(opts, Nan::New("maxDeliveryPointsPerVehicle").ToLocalChecked());
+  auto maybeComputeFromIndex =  Nan::Get(opts, Nan::New("computeFromIndex").ToLocalChecked());
+  auto maybeComputeUntilIndex = Nan::Get(opts, Nan::New("computeUntilIndex").ToLocalChecked());
+
+
+
+
   auto maybeFinalTime = Nan::Get(opts, Nan::New("finalTime").ToLocalChecked());
   auto maybeDeliveryPriorities = Nan::Get(opts, Nan::New("deliveryPriorities").ToLocalChecked());
   auto maybeFinalTimeDelayPenalization = Nan::Get(opts, Nan::New("finalTimeDelayPenalization").ToLocalChecked());
+
 
   auto computeTimeLimitOk = !maybeComputeTimeLimit.IsEmpty() && maybeComputeTimeLimit.ToLocalChecked()->IsNumber();
   auto numVehiclesOk = !maybeNumVehicles.IsEmpty() && maybeNumVehicles.ToLocalChecked()->IsNumber();
@@ -209,9 +225,22 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   bool isTimePenalizationOk = isTimePenalizationEmpty || maybeTimePenalization.ToLocalChecked()->IsNumber();
   bool isEndDelayPenalizationEmpty = maybeEndDelayPenalization.IsEmpty();
   bool isEndDelayPenalizationOk = isEndDelayPenalizationEmpty || maybeEndDelayPenalization.ToLocalChecked()->IsNumber();
+
+  bool isForceGlobalScheduleEmpty = maybeForceGlobalSchedule.IsEmpty();
+  bool isForceGlobalScheduleOk =  isForceGlobalScheduleEmpty || maybeForceGlobalSchedule.ToLocalChecked()->IsNumber();
+  bool isForceTimeWindowsEmpty = maybeForceTimeWindows.IsEmpty();
+  bool isForceTimeWindowsOk =  isForceTimeWindowsEmpty || maybeForceTimeWindows.ToLocalChecked()->IsNumber();
+  bool isMaxDeliveryPointsPerVehicleEmpty = maybeMaxDeliveryPointsPerVehicle.IsEmpty();
+  bool isMaxDeliveryPointsPerVehicleOk = isMaxDeliveryPointsPerVehicleEmpty || maybeMaxDeliveryPointsPerVehicle.ToLocalChecked()->IsNumber();
+  bool isComputeFromIndexEmpty = maybeComputeFromIndex.IsEmpty();
+  bool isComputeFromIndexOk = isComputeFromIndexEmpty || maybeComputeFromIndex.ToLocalChecked()->IsNumber();
+  bool isComputeUntilIndexEmpty = maybeComputeUntilIndex.IsEmpty();
+  bool isComputeUntilIndexOk = isComputeUntilIndexOk || maybeComputeUntilIndex.ToLocalChecked()->IsNumber();
+
   bool isFinalTimeOk = maybeFinalTime.ToLocalChecked()->IsNumber();
   bool isFinalTimeDelayPenalizationOk = maybeFinalTimeDelayPenalization.ToLocalChecked()->IsNumber();
   bool isDeliveryPrioritiesOk = maybeDeliveryPriorities.ToLocalChecked()->IsArray();
+
 
 
   // TODO: this is getting out of hand, clean up, or better think about generic parameter parsing
@@ -238,8 +267,16 @@ VRPSearchParams::VRPSearchParams(const Nan::FunctionCallbackInfo<v8::Value>& inf
   startDelayPenalization = isStartDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeStartDelayPenalization.ToLocalChecked()).FromJust();
   timePenalization = isTimePenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeTimePenalization.ToLocalChecked()).FromJust();
   endDelayPenalization = isEndDelayPenalizationEmpty ? 0 : Nan::To<std::int32_t>(maybeEndDelayPenalization.ToLocalChecked()).FromJust();
+
+  forceGlobalSchedule = isForceGlobalScheduleEmpty ? 0 :  Nan::To<std::int32_t>(maybeForceGlobalSchedule.ToLocalChecked()).FromJust();
+  forceTimeWindows = isForceTimeWindowsEmpty ? 0 : Nan::To<std::int32_t>(maybeForceTimeWindows.ToLocalChecked()).FromJust();;
+  maxDeliveryPointsPerVehicle = maxDeliveryPointsPerVehicle ? 0 : Nan::To<std::int32_t>(maybeMaxDeliveryPointsPerVehicle.ToLocalChecked()).FromJust();
+  computeFromIndex = isComputeFromIndexEmpty ? 0 : Nan::To<std::int32_t>(maybeComputeFromIndex.ToLocalChecked()).FromJust();
+  computeUntilIndex = isComputeUntilIndexOk ? -1 : Nan::To<std::int32_t>(maybeComputeUntilIndex.ToLocalChecked()).FromJust();
+
   finalTime = Nan::To<std::int32_t>(maybeFinalTime.ToLocalChecked()).FromJust();
   finalTimeDelayPenalization = Nan::To<std::int32_t>(maybeFinalTimeDelayPenalization.ToLocalChecked()).FromJust();
+
 
 
   auto routeLocksArray = maybeRouteLocks.ToLocalChecked().As<v8::Array>();
