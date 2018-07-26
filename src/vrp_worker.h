@@ -304,15 +304,14 @@ struct VRPWorker final : Nan::AsyncWorker {
 
     model.CloseModel();
 
-    /*
+
+
     // Locking routes into place needs to happen after the model is closed and the underlying vars are established
     const auto validLocks = model.ApplyLocksToAllVehicles(routeLocks, false);
 
     if (!validLocks)
       return SetErrorMessage("Invalid locks");
-    */
 
-    //cerr << timeWindows->at(24).start << ' ' << timeDimension.CumulVar(24) << ' ' << timeWindows->at(24).stop << endl;
 
 
     const auto* assignment = model.SolveWithParameters(searchParams);
