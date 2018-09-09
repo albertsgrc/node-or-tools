@@ -182,10 +182,16 @@ struct VRPWorker final : Nan::AsyncWorker {
     auto durationCallback = makeCallback(durationAdaptor);
 
     const static auto kDimensionTime = "time";
+    const static auto kDimensionTimeLimit = "timeLimit";
 
     model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/forceGlobalSchedule != 0, kDimensionTime);
     const auto& timeDimension = model.GetDimensionOrDie(kDimensionTime);
     auto* mutableTimeDimension = model.GetMutableDimension(kDimensionTime);
+
+    model.AddDimension(durationCallback, timeHorizon, timeHorizon, /*fix_start_cumul_to_zero=*/forceGlobalSchedule != 0, kDimensionTimeLimit);
+    const auto& timeDimensionLimit = model.GetDimensionOrDie(kDimensionTimeLimit);
+    auto* mutableTimeDimensionLimit = model.GetMutableDimension(kDimensionTimeLimit);
+
 
 
     int32_t min = timeHorizon;
@@ -245,7 +251,9 @@ struct VRPWorker final : Nan::AsyncWorker {
     }*/
 
 
-    model.SetDimensionTransitCost(kDimensionTime, timePenalization);
+    //mutableTimeDimension->SetSpanCostCoefficientForAllVehicles(timePenalization);
+
+    mutableTimeDimension->SetGlobalSpanCostCoefficient(timePenalization);
 
     // Delay Dimension
 
@@ -253,12 +261,11 @@ struct VRPWorker final : Nan::AsyncWorker {
 
 
     // Capacity Dimension
-
+    const static auto kDimensionCapacity = "capacity";
+    
     if (!ignoreCapacityLimit) {
         auto demandAdaptor = makeBinaryAdaptor(*demands);
         auto demandCallback = makeCallback(demandAdaptor);
-
-        const static auto kDimensionCapacity = "capacity";
 
         model.AddDimension(demandCallback, /*slack=*/0, vehicleCapacity, /*fix_start_cumul_to_zero=*/true, kDimensionCapacity);
         //const auto& capacityDimension = model.GetDimensionOrDie(kDimensionCapacity);
@@ -321,6 +328,10 @@ struct VRPWorker final : Nan::AsyncWorker {
       return SetErrorMessage("Unable to find a solution");
 
     const auto cost = static_cast<std::int64_t>(assignment->ObjectiveValue());
+
+    cerr << "Objective value: " << cost << endl;
+    //cerr << model.DebugOutputAssignment(*assignment, kDimensionTimeLimit) << endl << endl;
+    //cerr << model.DebugOutputAssignment(*assignment, kDimensionCapacity) << endl;
 
     std::vector<std::vector<NodeIndex>> routes;
     model.AssignmentToRoutes(*assignment, &routes);
